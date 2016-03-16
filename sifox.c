@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "hwlcd.h"
 #include "hwadc.h"
@@ -52,7 +53,8 @@
 #define APP_MODE_CONSOLE	1 << 2
 
 #define AT_COMMAND_PREFIX 	"AT$ss="
-#define AT_command_END		"\r"
+#define AT_COMMAND_END		"\r"
+#define AT_MAX_MESSAGE_SIZE	96
 
 uint8_t app_mode_status = 0xFF;
 uint8_t app_mode_status_changed = 0x00;
@@ -123,16 +125,18 @@ void execute_sensor_measurement()
   timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 10); //aanpassen naar 60
 }
 */
-void sendATmessage( char* data , int lenght)
+void sendATmessage(char* data, size_t length) //
 {
-	char* out_string [lenght];
-	memcpy(out_string, AT_COMMAND_PREFIX, strlen(AT_COMMAND_PREFIX)+1);
+	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
+	char f_data [length];		//12*8bytes = 96 bits max!
 	
-	char* out_string = memcpy(AT_command_END, string1,strlen(AT_COMMAND_PREFIX)+1 )
-	uart_send_string(o_uart,out_string); //LCD valt uit dan..
-	lcd_write_string(out_string);
-	//timer_post_task_delay(&sendATmessage, TIMER_TICKS_PER_SEC * 1);
-	
+	memcpy(f_data,AT_COMMAND_PREFIX, strlen(AT_COMMAND_PREFIX));
+	memcpy(f_data+strlen(AT_COMMAND_PREFIX), data, strlen(data));
+	memcpy(f_data+strlen(AT_COMMAND_PREFIX)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
+
+	lcd_write_string("Sending... \n");
+	uart_send_string(o_uart,f_data); 
+	lcd_write_string("Data send! \n");
 }
 
 /*
@@ -212,7 +216,8 @@ void bootstrap()
 	//uart_init_pc();
 	
 	lcd_write_string("EFM32 Sensor2\n");
-	execute_send_data();
+	//execute_send_data();
+	sendATmessage("76 62 25 a4 7b b0 1c 69 75 a9 a5 fe" , 96);
 	//char* string = conv_to_hex("Hallo" , 5);
 	//lcd_write_string(string);
 	
