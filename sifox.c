@@ -55,6 +55,8 @@
 #define AT_COMMAND_PREFIX 	"AT$ss="
 #define AT_COMMAND_END		"\r"
 #define AT_MAX_MESSAGE_SIZE	96
+#define AT_DB_COMMAND		"ATS302="
+#define AT_RF_BIT_COMMAND	"AT$SB="
 
 uint8_t app_mode_status = 0xFF;
 uint8_t app_mode_status_changed = 0x00;
@@ -66,6 +68,8 @@ static uart_handle_t* sigfox_uart;
 uart_handle_t* o_uart;
 uart_handle_t* uart_pc;
 uint8_t sensor_values[8];
+
+
 
 /*
 void execute_sensor_measurement()
@@ -130,9 +134,41 @@ void sendATmessage(char* data, size_t length) //
 	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
 	char f_data [length];		//12*8bytes = 96 bits max!
 	
+
+
 	memcpy(f_data,AT_COMMAND_PREFIX, strlen(AT_COMMAND_PREFIX));
 	memcpy(f_data+strlen(AT_COMMAND_PREFIX), data, strlen(data));
 	memcpy(f_data+strlen(AT_COMMAND_PREFIX)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
+
+	lcd_write_string("Sending... \n");
+	uart_send_string(o_uart,f_data); 
+	lcd_write_string("Data send! \n");
+}
+
+void sendAT_DBmessage(char* data, size_t length) //
+{
+	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
+	char f_data [length];		//12*8bytes = 96 bits max!
+	
+
+
+	memcpy(f_data,AT_DB_COMMAND, strlen(AT_DB_COMMAND));
+	memcpy(f_data+strlen(AT_DB_COMMAND), data, strlen(data));
+	memcpy(f_data+strlen(AT_DB_COMMAND)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
+
+	lcd_write_string("Sending... \n");
+	uart_send_string(o_uart,f_data); 
+	lcd_write_string("Data send! \n");
+}
+
+void sendAT_RFmessage(char* data, size_t length) //
+{
+	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
+	char f_data [length];		//12*8bytes = 96 bits max!
+	
+	memcpy(f_data,AT_RF_BIT_COMMAND, strlen(AT_RF_BIT_COMMAND));
+	memcpy(f_data+strlen(AT_RF_BIT_COMMAND), data, strlen(data));
+	memcpy(f_data+strlen(AT_RF_BIT_COMMAND)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
 
 	lcd_write_string("Sending... \n");
 	uart_send_string(o_uart,f_data); 
@@ -204,9 +240,21 @@ void execute_send_data(){
 	//timer_post_task_delay(&execute_send_data, TIMER_TICKS_PER_SEC * 1);
 }
 
+void userbutton_callback(button_id_t button_id)
+{
+	#ifdef PLATFORM_EFM32GG_STK3700
+	lcd_write_string("Butt %d", button_id);
+	#else
+	  lcd_write_string("button: %d\n", button_id);
+	#endif
+	sendATmessage("50" , 96);
+}
+
 void bootstrap()
 {
     //initSensors();
+	ubutton_register_callback(0, &userbutton_callback);
+    //ubutton_register_callback(1, &userbutton_callback);
     //init uart
     o_uart = uart_init(1,9600,4);
     uart_enable(o_uart);
@@ -217,8 +265,13 @@ void bootstrap()
 	
 	lcd_write_string("EFM32 Sensor2\n");
 	//execute_send_data();
-	sendATmessage("76 62 25 a4 7b b0 1c 69 75 a9 a5 fe" , 96);
-	//char* string = conv_to_hex("Hallo" , 5);
+	//sendAT_DBmessage("14" , 96);
+	//sendATmessage("36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e" , 96);
+	// byte lenght [2] = 0d 44
+	// byte lenght [12] = 36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e
+	
+	sendAT_RFmessage("1,1,1", 20);
+	
 	//lcd_write_string(string);
 	
 	while(1)
