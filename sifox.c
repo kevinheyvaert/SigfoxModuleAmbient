@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "hwlcd.h"
 #include "hwadc.h"
@@ -213,22 +214,21 @@ char ascii2hex(char sAscii){
 	return sHex;
 }
 */
-//http://cboard.cprogramming.com/c-programming/93123-ascii-hex.html
-/*
+
 char * conv_to_hex (char * input, int max_len) 
 {
     int ii = 0;
-    char * out_string = (char *) malloc0 (sizeof (char) * ((max_len*2)+1));
-     
+    char * out_string = malloc(sizeof((max_len*2)+1));
+
     for (ii = 0; ii < max_len; ii++) 
 	{
-        sprintf ((out_string+(ii*2)), "&#37;02x", (unsigned char) (*(input+ii)));
+        sprintf ((out_string+(ii*2)), "%02X", (unsigned char) (*(input+ii)));
     }
     
-	out_string[(max_len*2)] = '\0';
+	//out_string[(max_len*2)] = '\0';
     return out_string;
 }
-*/
+
 void execute_send_data(){
 
 	char* data = "AT\r";
@@ -270,9 +270,11 @@ void bootstrap()
 	// byte lenght [2] = 0d 44
 	// byte lenght [12] = 36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e
 	
-	sendAT_RFmessage("1,1,1", 20);
+	//sendAT_RFmessage("1,1,1", 20);
 	
 	//lcd_write_string(string);
+	char* in = "Hallo";
+	lcd_write_string(conv_to_hex(in,6));
 	
 	while(1)
 	{
