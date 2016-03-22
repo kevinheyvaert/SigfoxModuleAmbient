@@ -63,80 +63,15 @@ uint8_t app_mode_status = 0xFF;
 uint8_t app_mode_status_changed = 0x00;
 uint8_t app_mode = 0;
 
-static uart_handle_t* uart;
-static uart_handle_t* sigfox_uart;
-
 uart_handle_t* o_uart;
-uart_handle_t* uart_pc;
 uint8_t sensor_values[8];
 
 
-
-/*
-void execute_sensor_measurement()
+void sendATmessage(char* data) //
 {
-#ifdef PLATFORM_EFM32GG_STK3700
-  float internal_temp = hw_get_internal_temperature();
-  lcd_write_temperature(internal_temp*10, 1);
-
-  uint32_t vdd = hw_get_battery();
-
-#endif
-
-#if (defined PLATFORM_EFM32HG_STK3400  || defined PLATFORM_EZR32LG_WSTK6200A)
-  lcd_clear();
-  float internal_temp = hw_get_internal_temperature();
-  lcd_write_string("Int T: %2d.%d C\n", (int)internal_temp, (int)(internal_temp*10)%10);
-  log_print_string("Int T: %2d.%d C\n", (int)internal_temp, (int)(internal_temp*10)%10);
-
-  float external_temp = get_external_temperature();
-  lcd_write_string("Ext s T: %2d.%d C\n", (int)external_temp, (int)(external_temp*10)%10);
-  log_print_string("Ext s T: %2d.%d C\n", (int)external_temp, (int)(external_temp*10)%10);
-
-  uint32_t rhData;
-  uint32_t tData;
-  getHumidityAndTemperature(&rhData, &tData);
-
-  lcd_write_string("Ext T: %d.%d C\n", (tData/1000), (tData%1000)/100);
-  log_print_string("Temp: %d.%d C\n", (tData/1000), (tData%1000)/100);
-
-  lcd_write_string("Ext H: %d.%d\n", (rhData/1000), (rhData%1000)/100);
-  log_print_string("Hum: %d.%d\n", (rhData/1000), (rhData%1000)/100);
-
-  uint32_t vdd = hw_get_battery();
-
-  lcd_write_string("Batt %d mV\n", vdd);
-  log_print_string("Batt: %d mV\n", vdd);
-  
-  lcd_write_string("ATZ2");
-
-  //TODO: put sensor values in array
-
-  uint8_t sensor_values[8];
-  uint16_t *pointer =  (uint16_t*) sensor_values;
-  *pointer++ = (uint16_t) (internal_temp * 10);
-  *pointer++ = (uint16_t) (external_temp * 10);
-  *pointer++ = (uint16_t) (tData /100);
-  *pointer++ = (uint16_t) (rhData /100);
-  *pointer++ = (uint16_t) (vdd /10);
-
-  //fs_write_file(SENSOR_FILE_ID, 0, (uint8_t*)&sensor_values,8);
-#endif
-
-  //test uart
-  //uint8_t a[5]={internal_temp,external_temp,tData,rhData,vdd};
-
-
-  timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 10); //aanpassen naar 60
-}
-*/
-void sendATmessage(char* data, size_t length) //
-{
-	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
-	char f_data [length];		//12*8bytes = 96 bits max!
+	signed int msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
+	char f_data [msg_length];		//12*8bytes = 96 bits max!
 	
-
-
 	memcpy(f_data,AT_COMMAND_PREFIX, strlen(AT_COMMAND_PREFIX));
 	memcpy(f_data+strlen(AT_COMMAND_PREFIX), data, strlen(data));
 	memcpy(f_data+strlen(AT_COMMAND_PREFIX)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
@@ -172,60 +107,21 @@ void sendAT_RFmessage(char* data, size_t length) //
 	memcpy(f_data+strlen(AT_RF_BIT_COMMAND)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
 
 	lcd_write_string("Sending... \n");
+	lcd_write_string(f_data);
 	uart_send_string(o_uart,f_data); 
 	lcd_write_string("Data send! \n");
 }
 
-/*
-void execute_send_data_sigfox(){
-
-	char data,tmp;
-	uint16_t value;
-
-	for(uint8_t i=0;i<sizeof(sensor_values);i++){
-		value = sensor_values[i];
-		sprintf(tmp, "%d", value);
-		data = strcat(data,tmp);		//copy string
-	}
-
-	data = ascii2hex(data);
-
-	uart_send_string(o_uart,data);
-	lcd_write_string("Sending... \n");
-
-	timer_post_task_delay(&execute_send_data_sigfox, TIMER_TICKS_PER_SEC * 1);
-
-}
-*/
-/*
-char ascii2hex(char sAscii){
-
-	uint8_t len = strlen(sAscii);
-	char sHex;
-
-	if(sAscii[len-1]=='\n'){
-		sAscii[--len] = '\0';
-	}
-
-	for(uint8_t i = 0; i<len; i++){
-		sprintf(sHex+i*2, "%02X", sAscii[i]);
-	}
-
-	return sHex;
-}
-*/
-
-char * conv_to_hex (char * input, int max_len) 
+char * conv_to_hex (char * string) 
 {
-    int ii = 0;
-    char * out_string = malloc(sizeof((max_len*2)+1));
+    int length = strlen(string);
+	char * out_string = malloc(sizeof((length*2)+1));
 
-    for (ii = 0; ii < max_len; ii++) 
+    for (int i = 0; i < length; i++) 
 	{
-        sprintf ((out_string+(ii*2)), "%02X", (unsigned char) (*(input+ii)));
+        sprintf ((out_string+(i*2)), "%02X", (unsigned char) (*(string+i)));
     }
-    
-	//out_string[(max_len*2)] = '\0';
+    //lcd_write_string(out_string);
     return out_string;
 }
 
@@ -240,6 +136,65 @@ void execute_send_data(){
 	//timer_post_task_delay(&execute_send_data, TIMER_TICKS_PER_SEC * 1);
 }
 
+void execute_sensor_measurement()
+{
+#ifdef PLATFORM_EFM32GG_STK3700
+  float internal_temp = hw_get_internal_temperature();
+  lcd_write_temperature(internal_temp*10, 1);
+
+  uint32_t vdd = hw_get_battery();
+
+#endif
+
+#if (defined PLATFORM_EFM32HG_STK3400  || defined PLATFORM_EZR32LG_WSTK6200A)
+  lcd_clear();
+  float internal_temp = hw_get_internal_temperature();
+  lcd_write_string("Int T: %2d.%d C\n", (int)internal_temp, (int)(internal_temp*10)%10);
+  log_print_string("Int T: %2d.%d C\n", (int)internal_temp, (int)(internal_temp*10)%10);
+
+  float external_temp = get_external_temperature();
+  lcd_write_string("Ext s T: %2d.%d C\n", (int)external_temp, (int)(external_temp*10)%10);
+  log_print_string("Ext s T: %2d.%d C\n", (int)external_temp, (int)(external_temp*10)%10);
+
+  uint32_t rhData;
+  uint32_t tData;
+  getHumidityAndTemperature(&rhData, &tData);
+
+  lcd_write_string("Ext T: %d.%d C\n", (tData/1000), (tData%1000)/100);
+  log_print_string("Temp: %d.%d C\n", (tData/1000), (tData%1000)/100);
+
+  lcd_write_string("Ext H: %d.%d\n", (rhData/1000), (rhData%1000)/100);
+  log_print_string("Hum: %d.%d\n", (rhData/1000), (rhData%1000)/100);
+
+  char sensorData[12];
+  sprintf(sensorData,"%d.%d%d.%d%d.%d",(int)internal_temp,(int)(internal_temp*10)%10,(tData/1000),(tData%1000)/100,rhData/1000,(rhData%1000)/100);
+  sendATmessage(conv_to_hex(sensorData));
+  
+  //uint32_t vdd = hw_get_battery();
+
+  //lcd_write_string("Batt %d mV\n", vdd);
+  //log_print_string("Batt: %d mV\n", vdd);
+  
+  //TODO: put sensor values in array
+
+  uint8_t sensor_values[8];
+  uint16_t *pointer =  (uint16_t*) sensor_values;
+  *pointer++ = (uint16_t) (internal_temp * 10);
+  *pointer++ = (uint16_t) (external_temp * 10);
+  *pointer++ = (uint16_t) (tData /100);
+  *pointer++ = (uint16_t) (rhData /100);
+  *pointer++ = (uint16_t) (vdd /10);
+
+  //fs_write_file(SENSOR_FILE_ID, 0, (uint8_t*)&sensor_values,8);
+#endif
+
+  //test uart
+  //uint8_t a[5]={internal_temp,external_temp,tData,rhData,vdd};
+
+
+  //timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 10); //aanpassen naar 60
+}
+
 void userbutton_callback(button_id_t button_id)
 {
 	#ifdef PLATFORM_EFM32GG_STK3700
@@ -247,7 +202,7 @@ void userbutton_callback(button_id_t button_id)
 	#else
 	  lcd_write_string("button: %d\n", button_id);
 	#endif
-	sendATmessage("50" , 96);
+	//sendATmessage("50" , 96);
 }
 
 void bootstrap()
@@ -264,7 +219,6 @@ void bootstrap()
 	//uart_init_pc();
 	
 	lcd_write_string("EFM32 Sensor2\n");
-	//execute_send_data();
 	//sendAT_DBmessage("14" , 96);
 	//sendATmessage("36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e" , 96);
 	// byte lenght [2] = 0d 44
@@ -273,16 +227,16 @@ void bootstrap()
 	//sendAT_RFmessage("1,1,1", 20);
 	
 	//lcd_write_string(string);
-	char* in = "Hallo";
-	lcd_write_string(conv_to_hex(in,6));
+	//char* in = "Hallo";
+	//lcd_write_string(conv_to_hex(in));
 	
-	while(1)
-	{
+	//while(1)
+	//{
 		
-	}
+	//}
 	
-    //sched_register_task((&execute_sensor_measurement));
-    //timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 1);
+    sched_register_task((&execute_sensor_measurement));
+    timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 1);
 
     //sched_register_task((&execute_send_data));
     //sched_register_task((&execute_send_data_sigfox));
