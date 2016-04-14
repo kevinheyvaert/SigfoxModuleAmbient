@@ -160,23 +160,23 @@ void execute_sensor_measurement()
   uint32_t tData;
   getHumidityAndTemperature(&rhData, &tData);
 
-  lcd_write_string("Ext T: %d.%d C\n", (tData/1000), (tData%1000)/100);
+  lcd_write_string("Geck T: %d.%d C\n", (tData/1000), (tData%1000)/100);
   log_print_string("Temp: %d.%d C\n", (tData/1000), (tData%1000)/100);
 
-  lcd_write_string("Ext H: %d.%d\n", (rhData/1000), (rhData%1000)/100);
-  log_print_string("Hum: %d.%d\n", (rhData/1000), (rhData%1000)/100);
+  lcd_write_string("Geck H: %d.%d\n", (rhData/1000), (rhData%1000)/100);
+  log_print_string("Hum: %d.%d %\n", (rhData/1000), (rhData%1000)/100);
 
   char sensorData[12];
-  sprintf(sensorData,"%d.%d%d.%d%d.%d",(int)internal_temp,(int)(internal_temp*10)%10,(tData/1000),(tData%1000)/100,rhData/1000,(rhData%1000)/100);
-  sendATmessage(conv_to_hex(sensorData));
-  
+  sprintf(sensorData,"%x%x%x",(int)internal_temp,(tData/1000),(rhData/1000));
+  //sendATmessage(conv_to_hex(sensorData));
+  sendATmessage((sensorData));
   //uint32_t vdd = hw_get_battery();
 
   //lcd_write_string("Batt %d mV\n", vdd);
   //log_print_string("Batt: %d mV\n", vdd);
   
   //TODO: put sensor values in array
-
+	/*
   uint8_t sensor_values[8];
   uint16_t *pointer =  (uint16_t*) sensor_values;
   *pointer++ = (uint16_t) (internal_temp * 10);
@@ -184,7 +184,7 @@ void execute_sensor_measurement()
   *pointer++ = (uint16_t) (tData /100);
   *pointer++ = (uint16_t) (rhData /100);
   *pointer++ = (uint16_t) (vdd /10);
-
+*/
   //fs_write_file(SENSOR_FILE_ID, 0, (uint8_t*)&sensor_values,8);
 #endif
 
@@ -207,7 +207,7 @@ void userbutton_callback(button_id_t button_id)
 
 void bootstrap()
 {
-    //initSensors();
+    initSensors();
 	ubutton_register_callback(0, &userbutton_callback);
     //ubutton_register_callback(1, &userbutton_callback);
     //init uart
