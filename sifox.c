@@ -36,6 +36,7 @@
 #include "extsensor.h"
 #include "uart.h"
 #include "hwuart.h"
+#include "fifo.h"
 
 #if (!defined PLATFORM_EFM32GG_STK3700 && !defined PLATFORM_EFM32HG_STK3400 && !defined PLATFORM_EZR32LG_WSTK6200A)
 	#error Mismatch between the configured platform and the actual platform.
@@ -63,9 +64,8 @@ uint8_t app_mode_status = 0xFF;
 uint8_t app_mode_status_changed = 0x00;
 uint8_t app_mode = 0;
 
-uart_handle_t* o_uart;
+extern uart_handle_t* o_uart;
 uint8_t sensor_values[8];
-
 
 void sendATmessage(char* data) //
 {
@@ -86,8 +86,6 @@ void sendAT_DBmessage(char* data, size_t length) //
 	//uint8_t msg_length = strlen(AT_COMMAND_PREFIX)+strlen(AT_COMMAND_END)+strlen(data);
 	char f_data [length];		//12*8bytes = 96 bits max!
 	
-
-
 	memcpy(f_data,AT_DB_COMMAND, strlen(AT_DB_COMMAND));
 	memcpy(f_data+strlen(AT_DB_COMMAND), data, strlen(data));
 	memcpy(f_data+strlen(AT_DB_COMMAND)+strlen(data),AT_COMMAND_END, strlen(AT_COMMAND_END));
@@ -202,7 +200,6 @@ void userbutton_callback(button_id_t button_id)
 	#else
 	  lcd_write_string("button: %d\n", button_id);
 	#endif
-	//sendATmessage("50" , 96);
 }
 
 void bootstrap()
@@ -210,13 +207,7 @@ void bootstrap()
     initSensors();
 	ubutton_register_callback(0, &userbutton_callback);
     //ubutton_register_callback(1, &userbutton_callback);
-    //init uart
-    o_uart = uart_init(1,9600,4);
-    uart_enable(o_uart);
-    uart_set_rx_interrupt_callback(o_uart,uart_receive);
-	uart_rx_interrupt_enable(o_uart);
-	
-	//uart_init_pc();
+	uart_init_sigfox();
 	
 	lcd_write_string("EFM32 Sensor2\n");
 	//sendAT_DBmessage("14" , 96);
@@ -224,20 +215,16 @@ void bootstrap()
 	// byte lenght [2] = 0d 44
 	// byte lenght [12] = 36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e
 	
-	//sendAT_RFmessage("1,1,1", 20);
-	
-	//lcd_write_string(string);
-	//char* in = "Hallo";
-	//lcd_write_string(conv_to_hex(in));
-	
+	sendAT_RFmessage("1,2,1", 11);
 	//while(1)
 	//{
 		
 	//}
 	
-    sched_register_task((&execute_sensor_measurement));
-    timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 1);
-
+    //sched_register_task((&execute_sensor_measurement));
+    //timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 1);
+	sched_register_task((&readout_fifo_sigfox));
+	timer_post_task_delay(&readout_fifo_sigfox, TIMER_TICKS_PER_SEC * 40);
     //sched_register_task((&execute_send_data));
     //sched_register_task((&execute_send_data_sigfox));
 

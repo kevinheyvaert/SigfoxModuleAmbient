@@ -24,18 +24,50 @@
 #include <debug.h>
 #include "hwuart.h"
 #include "hwlcd.h"
+#include "fifo.h"
+#include "assert.h"
+#include "timer.h"
+
+#define BUFFER_SIZE	256
+#define COMMAND_SIZE_BEGIN 25
 
 static uart_handle_t* uart_gps;
 static uart_handle_t* uart_pc;
 static uart_handle_t* uart_sigfox;
+uart_handle_t* o_uart;				//voor extern bereikbaar te maken
 
+static fifo_t fifo_sigfox;
+static uint8_t buffer[BUFFER_SIZE] = { 0 };
 
 void uart_receive(uint8_t byte)
 {
 	//uart_send_byte(uart_pc,byte);
-	char* c = &byte;
-	lcd_write_string(c);
+	//char* c = &byte;
+	fifo_put(&fifo_sigfox, &byte, 1); //assert(err == SUCCESS);
+
+	//lcd_write_string(c);
 	//lcd_write_string("End program");
+	//readout_fifo_sigfox();
+    //if(!sched_is_scheduled(&readout_fifo_sigfox))
+    //    sched_post_task(&readout_fifo_sigfox);
+}
+
+void readout_fifo_sigfox()
+{
+
+	//if(fifo_get_size(&fifo_sigfox) >= 50)
+	//{
+		uint8_t length = fifo_get_size(&fifo_sigfox);
+		//uint8_t received_data[length];
+		//fifo_pop(&fifo_sigfox, buffer, length);
+		fifo_peek(&fifo_sigfox, buffer ,0, length);
+		lcd_write_string(buffer);
+	//}
+}
+
+void clear_fifo_sigfox()
+{
+	fifo_clear(&fifo_sigfox);
 }
 
 void uart_receive_pc(uint8_t byte)
@@ -51,12 +83,14 @@ void uart_init_gps()
 	uart_rx_interrupt_enable(uart_gps);
 }
 
+
 void uart_init_sigfox()
 {
-	uart_sigfox = uart_init(1, 9600, 4);
-	uart_enable(uart_sigfox);
-	uart_set_rx_interrupt_callback(uart_sigfox,uart_receive);
-	uart_rx_interrupt_enable(uart_sigfox);
+	fifo_init(&fifo_sigfox, buffer, BUFFER_SIZE);
+	o_uart = uart_init(1, 9600, 4);
+	uart_enable(o_uart);
+	uart_set_rx_interrupt_callback(o_uart,uart_receive);
+	uart_rx_interrupt_enable(o_uart);
 }
 
 void uart_init_pc()
@@ -66,6 +100,8 @@ void uart_init_pc()
 	uart_set_rx_interrupt_callback(uart_pc,uart_receive_pc);
 	uart_rx_interrupt_enable(uart_pc);
 }
+
+
 
 
 

@@ -21,13 +21,18 @@
 #include "link_c.h"
 
 
-__LINK_C void uart_receive(uint8_t byte);
+void uart_receive(uint8_t byte);
 
-__LINK_C void uart_init_gps();
+void uart_init_gps();
 
-__LINK_C void uart_init_pc();
+void uart_init_pc();
 
-__LINK_C void uart_init_sigfox();
+void uart_init_sigfox();
+ 
+void uart_receive_pc(uint8_t byte);
+ 
+void readout_fifo_sigfox();
 
-__LINK_C void uart_receive_pc(uint8_t byte);
+void clear_fifo_sigfox();
+
 
