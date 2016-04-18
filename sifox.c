@@ -223,8 +223,8 @@ void bootstrap()
 	
     //sched_register_task((&execute_sensor_measurement));
     //timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 1);
-	sched_register_task((&readout_fifo_sigfox));
-	timer_post_task_delay(&readout_fifo_sigfox, TIMER_TICKS_PER_SEC * 40);
+	//sched_register_task((&readout_fifo_sigfox));
+	//timer_post_task_delay(&readout_fifo_sigfox, TIMER_TICKS_PER_SEC * 40);
     //sched_register_task((&execute_send_data));
     //sched_register_task((&execute_send_data_sigfox));
 
