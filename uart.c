@@ -36,8 +36,8 @@ static uart_handle_t* uart_pc;
 static uart_handle_t* uart_sigfox;
 uart_handle_t* o_uart;				//voor extern bereikbaar te maken
 
-static fifo_t fifo_sigfox;
-static uint8_t buffer[BUFFER_SIZE] = { 0 };
+fifo_t fifo_sigfox;
+uint8_t buffer[BUFFER_SIZE];
 
 void readout_fifo_sigfox()
 {
@@ -65,9 +65,9 @@ void uart_receive(uint8_t byte)
 
 	//lcd_write_string(c);
 	//lcd_write_string("End program");
-	readout_fifo_sigfox();
-    if(!sched_is_scheduled(&readout_fifo_sigfox))
-        sched_post_task(&readout_fifo_sigfox);
+	//readout_fifo_sigfox();
+    //if(!sched_is_scheduled(&readout_fifo_sigfox))
+        //sched_post_task(&readout_fifo_sigfox);
 }
 
 void uart_receive_pc(uint8_t byte)

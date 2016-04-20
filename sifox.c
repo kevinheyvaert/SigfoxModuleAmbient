@@ -193,6 +193,15 @@ void execute_sensor_measurement()
   //timer_post_task_delay(&execute_sensor_measurement, TIMER_TICKS_PER_SEC * 10); //aanpassen naar 60
 }
 
+void request_reply(){
+	char* data = "AT$sb=1,2,1";
+	//uart_send_string(o_uart,"\n");
+	//uart_send_string(o_uart, data);
+	sendAT_RFmessage("1,2,1", 11);
+	timer_post_task_delay(&readout_fifo_sigfox, TIMER_TICKS_PER_SEC * 40);
+	
+}
+
 void userbutton_callback(button_id_t button_id)
 {
 	#ifdef PLATFORM_EFM32GG_STK3700
@@ -215,7 +224,10 @@ void bootstrap()
 	// byte lenght [2] = 0d 44
 	// byte lenght [12] = 36 1b 4d 39 c1 f4 71 14 7b 0f 09 9e
 	
-	sendAT_RFmessage("1,2,1", 11);
+	//
+	sched_register_task((&readout_fifo_sigfox));
+	sched_register_task((&request_reply));
+	timer_post_task_delay((&request_reply), TIMER_TICKS_PER_SEC * 1);
 	//while(1)
 	//{
 		
